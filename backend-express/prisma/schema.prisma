@@ -1,0 +1,44 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+    id        String     @id @default(uuid())
+    email     String     @unique
+    createdAt DateTime   @default(now())
+    updatedAt DateTime   @updatedAt
+    bookmarks Bookmark[]
+}
+
+model Bookmark {
+    id         String      @id @default(uuid())
+    youtubeId  String      // e.g., the unique YouTube video ID like "dQw4w9WgXcQ"
+    title      String      // Title of the YouTube video
+    userId     String
+    user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    timestamps Timestamp[]
+    createdAt  DateTime    @default(now())
+    updatedAt  DateTime    @updatedAt
+
+    @@unique([userId, youtubeId]) // A user can bookmark a specific video only once, but have multiple timestamps in it
+}
+
+model Timestamp {
+    id         String   @id @default(uuid())
+    timeInSec  Float    // The exact timestamp in seconds (e.g., 125.5 for 2m 5.5s)
+    note       String?  // Optional user note for this specific timestamp
+    bookmarkId String
+    bookmark   Bookmark @relation(fields: [bookmarkId], references: [id], onDelete: Cascade)
+    createdAt  DateTime @default(now())
+}
