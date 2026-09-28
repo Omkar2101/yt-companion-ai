@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "YT Context Hub - Bookmark Manager",
+  "version": "1.0.0",
+  "description": "Save YouTube timestamps and manage video bookmarks with AI context.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://www.youtube.com/*"
+  ],
+  "action": {
+    "default_popup": "index.html"
+  }
+}
