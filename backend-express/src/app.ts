@@ -1,6 +1,7 @@
 import express, { Application, Request, Response } from "express";
 import cors from "cors";
 import bookmarkRoutes from "./routes/bookmark.routes";
+import videoRoutes from "./routes/videoRoutes";
 
 const app: Application = express();
 
@@ -15,5 +16,7 @@ app.get("/health", (req: Request, res: Response) => {
 });
 
 app.use("/api/bookmarks", bookmarkRoutes);
+
+app.use("/api/videos", videoRoutes);
 
 export default app;

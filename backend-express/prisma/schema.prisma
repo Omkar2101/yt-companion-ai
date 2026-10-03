@@ -42,3 +42,27 @@ model Timestamp {
     bookmark   Bookmark @relation(fields: [bookmarkId], references: [id], onDelete: Cascade)
     createdAt  DateTime @default(now())
 }
+
+model Video {
+  id          String   @id @default(uuid())
+  youtubeId   String   @unique
+  title       String?
+  createdAt   DateTime @default(now())
+  
+  // A video has many transcript chunks
+  chunks      TranscriptChunk[]
+}
+
+model TranscriptChunk {
+  id        String   @id @default(uuid())
+  videoId   String
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  
+  start     Float    // e.g., 1.36 seconds
+  text      String   // The ~500 character text block
+  
+  // Storing the 384-dimensional vector as floats or JSON
+  embedding Json     // Stores [-0.0301, -0.0891, 0.1680, ...]
+  
+  createdAt DateTime @default(now())
+}
