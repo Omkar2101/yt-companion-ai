@@ -65,3 +65,11 @@ def process_youtube_transcript(youtube_id: str):
             "success": False,
             "error": str(e)
         }
+
+
+def vectorize_query(query_text: str):
+    try:
+        vector = model.encode(query_text).tolist()
+        return {"success": True, "embedding": vector}
+    except Exception as e:
+        return {"success": False, "error": str(e)}

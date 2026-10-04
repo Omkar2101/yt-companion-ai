@@ -1,5 +1,6 @@
+from app.services import vectorize_query
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, ConfigDict # 1. Import ConfigDict if needed
+from pydantic import BaseModel, ConfigDict
 from app.services import process_youtube_transcript
 
 app = FastAPI(title="YT Context Hub - AI Microservice")
@@ -8,6 +9,10 @@ app = FastAPI(title="YT Context Hub - AI Microservice")
 class VideoIdRequest(BaseModel):
     youtubeId: str
     
+    model_config = ConfigDict(protected_namespaces=())
+
+class SearchQueryRequest(BaseModel):
+    query: str
     model_config = ConfigDict(protected_namespaces=())
 
 @app.get("/health")
@@ -25,4 +30,12 @@ def get_transcript_embeddings(payload: VideoIdRequest):
             "error": result["error"]
         }
         
+    return result
+
+
+@app.post("/vectorize-query")
+def get_query_embedding(payload: SearchQueryRequest):
+    result = vectorize_query(payload.query)
+    if not result["success"]:
+        raise HTTPException(status_code=500, error=result["error"])
     return result

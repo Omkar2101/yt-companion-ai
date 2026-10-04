@@ -2,6 +2,7 @@ import express, { Application, Request, Response } from "express";
 import cors from "cors";
 import bookmarkRoutes from "./routes/bookmark.routes";
 import videoRoutes from "./routes/videoRoutes";
+import searchRoutes from "./routes/searchRoutes";
 
 const app: Application = express();
 
@@ -18,5 +19,7 @@ app.get("/health", (req: Request, res: Response) => {
 app.use("/api/bookmarks", bookmarkRoutes);
 
 app.use("/api/videos", videoRoutes);
+
+app.use("/api/videos", searchRoutes);
 
 export default app;
