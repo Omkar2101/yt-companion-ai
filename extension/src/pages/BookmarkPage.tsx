@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Header } from '../components/Header';
+import { SemanticSearchTab } from '../components/SemanticSearchTab';
 import {
   getYouTubeVideoInfo,
   getYouTubeCurrentTime,
@@ -21,6 +22,9 @@ export function BookmarkPage() {
   });
   const [tempEmail, setTempEmail] = useState(email);
   const [isEditingEmail, setIsEditingEmail] = useState(false);
+
+  // Top Nav Tab: 'bookmarks' | 'search'
+  const [navTab, setNavTab] = useState<'bookmarks' | 'search'>('bookmarks');
 
   const [videoInfo, setVideoInfo] = useState<YouTubeVideoInfo | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -205,6 +209,19 @@ export function BookmarkPage() {
       )
     : allTimestamps;
 
+  // Universal Seek: active tab or open in new tab
+  const handleUniversalSeek = async (timeInSec: number, targetYoutubeId?: string) => {
+    if (videoInfo && (!targetYoutubeId || targetYoutubeId === videoInfo.youtubeId)) {
+      await handleSeek(timeInSec);
+    } else if (targetYoutubeId) {
+      chrome.tabs.create({
+        url: `https://www.youtube.com/watch?v=${targetYoutubeId}&t=${Math.floor(timeInSec)}s`,
+      });
+      setStatus({ type: 'info', text: `Opened video at ${formatTime(timeInSec)}` });
+      setTimeout(() => setStatus(null), 2500);
+    }
+  };
+
   return (
     <div className="bookmark-page">
       <Header
@@ -215,6 +232,32 @@ export function BookmarkPage() {
           setIsEditingEmail(!isEditingEmail);
         }}
       />
+
+      {/* Top Primary Navigation Bar */}
+      <div className="nav-tabs-bar">
+        <button
+          className={`nav-tab-item ${navTab === 'bookmarks' ? 'active' : ''}`}
+          onClick={() => setNavTab('bookmarks')}
+          type="button"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+          </svg>
+          <span>Bookmarks</span>
+        </button>
+
+        <button
+          className={`nav-tab-item ${navTab === 'search' ? 'active' : ''}`}
+          onClick={() => setNavTab('search')}
+          type="button"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+          </svg>
+          <span>AI Search</span>
+          <span className="ai-badge">AI</span>
+        </button>
+      </div>
 
       {/* Quick Email Switcher Drawer */}
       {isEditingEmail && (
@@ -235,7 +278,17 @@ export function BookmarkPage() {
 
       {/* Main Content Area */}
       <div className="main-content">
-        {/* Active Video Status Banner */}
+        {navTab === 'search' ? (
+          <SemanticSearchTab
+            activeVideo={videoInfo}
+            email={email}
+            savedBookmarks={bookmarks}
+            onSeek={handleUniversalSeek}
+            onBookmarkSaved={loadBookmarks}
+          />
+        ) : (
+          <>
+            {/* Active Video Status Banner */}
         {videoInfo ? (
           <div className="video-banner">
             <div className="video-info">
@@ -504,6 +557,8 @@ export function BookmarkPage() {
             )}
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   );

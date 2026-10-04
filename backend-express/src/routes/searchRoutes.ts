@@ -1,9 +1,12 @@
 import { Router } from "express";
-import { handleSearch } from "../controllers/searchController";
+import { handleSearch, handleCheckStatus } from "../controllers/searchController";
 
 const router = Router();
 
-// POST /api/search/semantic-search
+// POST /semantic-search
 router.post("/semantic-search", handleSearch);
+
+// GET /status/:youtubeId
+router.get("/status/:youtubeId", handleCheckStatus);
 
 export default router;

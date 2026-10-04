@@ -87,3 +87,61 @@ export const deleteTimestamp = async (id: string): Promise<void> => {
   }
 };
 
+export interface SearchMatchItem {
+  id: string;
+  timestamp: number;
+  text: string;
+  matchScore: number;
+}
+
+export interface SemanticSearchResult {
+  query: string;
+  youtubeId: string;
+  videoTitle?: string;
+  matchScore: number;
+  timestamp: number;
+  matchedText: string;
+  bestMatch: SearchMatchItem | null;
+  topMatches: SearchMatchItem[];
+  totalChunks: number;
+}
+
+/**
+ * Executes semantic search query against a YouTube video transcript.
+ * Automatically triggers indexing on backend if not already indexed.
+ */
+export const searchSemantic = async (
+  youtubeId: string,
+  query: string
+): Promise<SemanticSearchResult> => {
+  const response = await fetch(`${BACKEND_URL}/api/videos/semantic-search`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ youtubeId, query }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || 'Semantic search failed.');
+  }
+
+  return data.result;
+};
+
+/**
+ * Checks if a video is already indexed in the database.
+ */
+export const checkVideoStatus = async (youtubeId: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/videos/status/${youtubeId}`);
+    const data = await response.json();
+    return !!data.isIndexed;
+  } catch {
+    return false;
+  }
+};
+
+

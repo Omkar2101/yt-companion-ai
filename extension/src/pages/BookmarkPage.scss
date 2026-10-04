@@ -47,6 +47,61 @@
     }
   }
 
+  // Top Primary Navigation Bar
+  .nav-tabs-bar {
+    display: flex;
+    padding: 0 16px;
+    background-color: $bg-surface;
+    border-bottom: 1px solid $border-color;
+    gap: 18px;
+
+    .nav-tab-item {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 4px 11px;
+      background: none;
+      border: none;
+      font-size: 12px;
+      font-weight: 600;
+      color: $text-secondary;
+      cursor: pointer;
+      transition: color 0.15s ease;
+
+      &:hover {
+        color: $text-primary;
+      }
+
+      &.active {
+        color: $text-primary;
+
+        &::after {
+          content: '';
+          position: absolute;
+          bottom: -1px;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background-color: $accent-green;
+          border-radius: $radius-pill;
+          box-shadow: 0 -1px 6px rgba(16, 185, 129, 0.6);
+        }
+      }
+
+      .ai-badge {
+        font-size: 9px;
+        font-weight: 700;
+        padding: 1px 5px;
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(16, 185, 129, 0.08));
+        border: 1px solid rgba(16, 185, 129, 0.35);
+        color: $accent-green-pastel;
+        border-radius: $radius-pill;
+        letter-spacing: 0.04em;
+      }
+    }
+  }
+
   // Main Content Container
   .main-content {
     padding: 14px 16px;

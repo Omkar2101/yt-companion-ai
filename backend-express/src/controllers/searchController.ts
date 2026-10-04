@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { searchVideoTranscript } from "../services/searchService";
+import { searchVideoTranscript, checkVideoIndexed } from "../services/searchService";
 
 export async function handleSearch(req: Request, res: Response) {
   try {
@@ -26,3 +26,21 @@ export async function handleSearch(req: Request, res: Response) {
     });
   }
 }
+
+export async function handleCheckStatus(req: Request, res: Response) {
+  try {
+    const youtubeId = (req.params.youtubeId as string) || "";
+    if (!youtubeId) {
+      return res.status(400).json({ success: false, message: "youtubeId is required" });
+    }
+    const isIndexed = await checkVideoIndexed(youtubeId);
+    return res.status(200).json({
+      success: true,
+      youtubeId,
+      isIndexed,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+

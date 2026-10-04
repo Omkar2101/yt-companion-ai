@@ -19,7 +19,7 @@ app.get("/health", (req: Request, res: Response) => {
 app.use("/api/bookmarks", bookmarkRoutes);
 
 app.use("/api/videos", videoRoutes);
-
 app.use("/api/videos", searchRoutes);
+app.use("/api/search", searchRoutes);
 
 export default app;
