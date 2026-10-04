@@ -99,6 +99,17 @@
         border-radius: $radius-pill;
         letter-spacing: 0.04em;
       }
+
+      .no-captions-badge {
+        font-size: 8px;
+        font-weight: 700;
+        padding: 1px 5px;
+        background-color: rgba(245, 158, 11, 0.12);
+        border: 1px solid rgba(245, 158, 11, 0.28);
+        color: #fbbf24;
+        border-radius: $radius-pill;
+        letter-spacing: 0.03em;
+      }
     }
   }
 

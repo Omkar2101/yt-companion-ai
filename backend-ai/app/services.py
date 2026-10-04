@@ -5,17 +5,18 @@ from app.transcript import get_video_transcript
 # Load our local model once into memory
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-def process_youtube_transcript(youtube_id: str):
+def process_youtube_transcript(youtube_id: str, client_transcript: list = None):
     try:
-        # 1. Fetch the transcript (this is the list of dictionaries with 'text', 'start', 'duration')
-        transcript_data = get_video_transcript(youtube_id)
-        #add log
-        print(transcript_data)
-        
-        if not transcript_data["success"]:
-            return transcript_data
-
-        fetched_data = transcript_data["raw_transcript"]
+        # 1. Primary: Use client-provided transcript if available; Secondary: Fallback to backend library
+        if client_transcript and len(client_transcript) > 0:
+            print(f"[AI Service] Using client-extracted transcript for {youtube_id} ({len(client_transcript)} segments)")
+            fetched_data = client_transcript
+        else:
+            print(f"[AI Service] Falling back to backend youtube-transcript-api for {youtube_id}")
+            transcript_data = get_video_transcript(youtube_id)
+            if not transcript_data["success"]:
+                return transcript_data
+            fetched_data = transcript_data["raw_transcript"]
         
         # 2. Smart Chunking Algorithm
         # We group text segments together until a chunk reaches roughly ~500 characters,

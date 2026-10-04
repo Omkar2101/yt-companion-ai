@@ -14,7 +14,8 @@ const withChunks = {
  * vectorizes them via the Python AI service and persists the result.
  */
 export async function getOrProcessVideoTranscript(
-  youtubeId: string
+  youtubeId: string,
+  clientTranscript?: { start: number; text: string }[]
 ): Promise<ProcessVideoResult> {
   const cached = await prisma.video.findUnique({
     where: { youtubeId },
@@ -32,7 +33,10 @@ export async function getOrProcessVideoTranscript(
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ youtubeId }),
+    body: JSON.stringify({
+      youtubeId,
+      transcript: clientTranscript && clientTranscript.length > 0 ? clientTranscript : undefined,
+    }),
   }).catch((err: Error & { cause?: { code?: string } }) => {
     throw new Error(`Cannot reach AI service at ${url} (${err.cause?.code ?? err.message})`);
   });

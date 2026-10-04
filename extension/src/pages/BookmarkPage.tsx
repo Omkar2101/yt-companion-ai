@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Header } from '../components/Header';
 import { SemanticSearchTab } from '../components/SemanticSearchTab';
+import { checkTabCaptions } from '../services/transcriptExtractor';
 import {
   getYouTubeVideoInfo,
   getYouTubeCurrentTime,
@@ -25,6 +26,7 @@ export function BookmarkPage() {
 
   // Top Nav Tab: 'bookmarks' | 'search'
   const [navTab, setNavTab] = useState<'bookmarks' | 'search'>('bookmarks');
+  const [hasCaptions, setHasCaptions] = useState<boolean | null>(null);
 
   const [videoInfo, setVideoInfo] = useState<YouTubeVideoInfo | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -59,8 +61,13 @@ export function BookmarkPage() {
       setVideoInfo(info);
       const time = await getYouTubeCurrentTime(info.tabId);
       setCurrentTime(time);
+
+      // Check caption availability in active tab
+      const captionRes = await checkTabCaptions(info.tabId);
+      setHasCaptions(captionRes.hasCaptions);
     } catch {
       setVideoInfo(null);
+      setHasCaptions(null);
     }
   }, []);
 
@@ -247,7 +254,7 @@ export function BookmarkPage() {
         </button>
 
         <button
-          className={`nav-tab-item ${navTab === 'search' ? 'active' : ''}`}
+          className={`nav-tab-item ${navTab === 'search' ? 'active' : ''} ${hasCaptions === false ? 'no-captions' : ''}`}
           onClick={() => setNavTab('search')}
           type="button"
         >
@@ -255,7 +262,11 @@ export function BookmarkPage() {
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
           </svg>
           <span>AI Search</span>
-          <span className="ai-badge">AI</span>
+          {hasCaptions === false ? (
+            <span className="no-captions-badge">No Captions</span>
+          ) : (
+            <span className="ai-badge">AI</span>
+          )}
         </button>
       </div>
 
@@ -283,8 +294,10 @@ export function BookmarkPage() {
             activeVideo={videoInfo}
             email={email}
             savedBookmarks={bookmarks}
+            hasCaptions={hasCaptions}
             onSeek={handleUniversalSeek}
             onBookmarkSaved={loadBookmarks}
+            onSwitchToBookmarks={() => setNavTab('bookmarks')}
           />
         ) : (
           <>

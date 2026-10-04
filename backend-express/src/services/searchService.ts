@@ -31,6 +31,7 @@ export async function checkVideoIndexed(youtubeId: string): Promise<boolean> {
 export async function searchVideoTranscript(
   youtubeId: string,
   searchQuery: string,
+  clientTranscript?: { start: number; text: string }[]
 ) {
   // 1. Find video in PostgreSQL or auto-process if missing
   let video: VideoWithChunks | null = (await prisma.video.findUnique({
@@ -40,7 +41,7 @@ export async function searchVideoTranscript(
 
   if (!video || video.chunks.length === 0) {
     console.log(`[Semantic Search] Video ${youtubeId} not in DB. Auto-indexing now...`);
-    const processed = await getOrProcessVideoTranscript(youtubeId);
+    const processed = await getOrProcessVideoTranscript(youtubeId, clientTranscript);
     video = processed.video;
   }
 

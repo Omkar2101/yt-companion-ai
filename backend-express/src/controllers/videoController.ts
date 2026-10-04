@@ -3,7 +3,7 @@ import { getOrProcessVideoTranscript } from "../services/videoService";
 
 export async function processVideo(req: Request, res: Response) {
   try {
-    const { youtubeId } = req.body;
+    const { youtubeId, clientTranscript } = req.body;
 
     if (!youtubeId) {
       return res.status(400).json({
@@ -12,7 +12,7 @@ export async function processVideo(req: Request, res: Response) {
       });
     }
 
-    const result = await getOrProcessVideoTranscript(youtubeId);
+    const result = await getOrProcessVideoTranscript(youtubeId, clientTranscript);
     console.log(result, "result");
 
     return res.status(200).json({

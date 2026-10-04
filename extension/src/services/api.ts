@@ -112,14 +112,19 @@ export interface SemanticSearchResult {
  */
 export const searchSemantic = async (
   youtubeId: string,
-  query: string
+  query: string,
+  clientTranscript?: { start: number; text: string }[] | null
 ): Promise<SemanticSearchResult> => {
   const response = await fetch(`${BACKEND_URL}/api/videos/semantic-search`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ youtubeId, query }),
+    body: JSON.stringify({
+      youtubeId,
+      query,
+      clientTranscript: clientTranscript && clientTranscript.length > 0 ? clientTranscript : undefined,
+    }),
   });
 
   const data = await response.json();

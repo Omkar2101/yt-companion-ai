@@ -3,7 +3,7 @@ import { searchVideoTranscript, checkVideoIndexed } from "../services/searchServ
 
 export async function handleSearch(req: Request, res: Response) {
   try {
-    const { youtubeId, query } = req.body;
+    const { youtubeId, query, clientTranscript } = req.body;
 
     if (!youtubeId || !query) {
       return res.status(400).json({
@@ -12,7 +12,7 @@ export async function handleSearch(req: Request, res: Response) {
       });
     }
 
-    const searchResult = await searchVideoTranscript(youtubeId, query);
+    const searchResult = await searchVideoTranscript(youtubeId, query, clientTranscript);
 
     return res.status(200).json({
       success: true,

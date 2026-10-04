@@ -8,22 +8,27 @@ import {
   type BookmarkItem,
 } from '../services/api';
 import { formatTime, type YouTubeVideoInfo } from '../services/youtube';
+import { extractTranscriptFromTab } from '../services/transcriptExtractor';
 import './SemanticSearchTab.scss';
 
 interface SemanticSearchTabProps {
   activeVideo: YouTubeVideoInfo | null;
   email: string;
   savedBookmarks: BookmarkItem[];
+  hasCaptions?: boolean | null;
   onSeek: (timeInSec: number, targetYoutubeId?: string) => void;
   onBookmarkSaved?: () => void;
+  onSwitchToBookmarks?: () => void;
 }
 
 export function SemanticSearchTab({
   activeVideo,
   email,
   savedBookmarks,
+  hasCaptions,
   onSeek,
   onBookmarkSaved,
+  onSwitchToBookmarks,
 }: SemanticSearchTabProps) {
   // Video Selection
   const [selectedYoutubeId, setSelectedYoutubeId] = useState<string>(
@@ -122,7 +127,18 @@ export function SemanticSearchTab({
     setError(null);
 
     try {
-      const result = await searchSemantic(selectedYoutubeId, searchQuery);
+      // Primary Path: If searching active tab video and not indexed yet, extract transcript directly in browser
+      let clientTranscript = null;
+      if (activeVideo && activeVideo.youtubeId === selectedYoutubeId && !isIndexed) {
+        try {
+          clientTranscript = await extractTranscriptFromTab(activeVideo.tabId);
+          console.log(`[TranscriptExtractor] Extracted ${clientTranscript?.length || 0} chunks from active tab`);
+        } catch {
+          // If client extract fails or is unavailable, backend fallback will handle it
+        }
+      }
+
+      const result = await searchSemantic(selectedYoutubeId, searchQuery, clientTranscript);
       setSearchResult(result);
       setIsIndexed(true);
     } catch (err: unknown) {
@@ -174,6 +190,53 @@ export function SemanticSearchTab({
     'Steps or instructions',
     'Example or demo',
   ];
+
+  // Graceful UX Fallback when active video has no captions
+  if (!isCustomVideo && hasCaptions === false) {
+    return (
+      <div className="semantic-search-tab">
+        <div className="no-captions-fallback-card">
+          <div className="fallback-badge">
+            <span className="dot warning" />
+            <span>Captions Disabled on YouTube</span>
+          </div>
+
+          <div className="fallback-icon-wrapper">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2" />
+              <path d="M7 15h4M15 15h2M7 11.5h10" />
+              <line x1="2" y1="2" x2="22" y2="22" />
+            </svg>
+          </div>
+
+          <h3 className="fallback-heading">AI Search Unavailable for this Video</h3>
+          <p className="fallback-description">
+            Closed captions or subtitles are disabled or unavailable for this video on YouTube.
+            You can still capture and manage manual timestamp notes!
+          </p>
+
+          <div className="fallback-actions">
+            {onSwitchToBookmarks && (
+              <button className="primary-fallback-btn" onClick={onSwitchToBookmarks} type="button">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+                <span>Go to Bookmarks</span>
+              </button>
+            )}
+
+            <button
+              className="secondary-fallback-btn"
+              onClick={() => setIsCustomVideo(true)}
+              type="button"
+            >
+              Search Another Video
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="semantic-search-tab">
