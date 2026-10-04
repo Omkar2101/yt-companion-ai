@@ -6,6 +6,7 @@ export interface BookmarkPayload {
   title: string;
   timeInSec: number;
   note?: string;
+  autoDelete?: boolean;
 }
 
 export interface TimestampItem {
@@ -14,6 +15,7 @@ export interface TimestampItem {
   note: string | null;
   bookmarkId: string;
   createdAt: string;
+  expiresAt?: string | null;
 }
 
 export interface BookmarkItem {
@@ -85,6 +87,30 @@ export const deleteTimestamp = async (id: string): Promise<void> => {
   if (!response.ok) {
     throw new Error(data.error || 'Failed to delete timestamp');
   }
+};
+
+/**
+ * Toggles 24-hour auto-delete for a specific timestamp.
+ */
+export const toggleAutoDeleteTimestamp = async (
+  id: string,
+  autoDelete: boolean
+): Promise<{ success: boolean; message: string; timestamp: TimestampItem }> => {
+  const response = await fetch(`${BACKEND_URL}/api/bookmarks/timestamps/${id}/auto-delete`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ autoDelete }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to toggle auto-delete');
+  }
+
+  return data;
 };
 
 export interface SearchMatchItem {

@@ -35,12 +35,15 @@ model Bookmark {
 }
 
 model Timestamp {
-    id         String   @id @default(uuid())
-    timeInSec  Float    // The exact timestamp in seconds (e.g., 125.5 for 2m 5.5s)
-    note       String?  // Optional user note for this specific timestamp
+    id         String    @id @default(uuid())
+    timeInSec  Float     // The exact timestamp in seconds (e.g., 125.5 for 2m 5.5s)
+    note       String?   // Optional user note for this specific timestamp
     bookmarkId String
-    bookmark   Bookmark @relation(fields: [bookmarkId], references: [id], onDelete: Cascade)
-    createdAt  DateTime @default(now())
+    bookmark   Bookmark  @relation(fields: [bookmarkId], references: [id], onDelete: Cascade)
+    createdAt  DateTime  @default(now())
+    expiresAt  DateTime? // Auto-delete timestamp after 24 hrs if set; null if permanent
+
+    @@index([expiresAt])
 }
 
 model Video {

@@ -9,6 +9,8 @@ import {
 } from '../services/api';
 import { formatTime, type YouTubeVideoInfo } from '../services/youtube';
 import { extractTranscriptFromTab } from '../services/transcriptExtractor';
+import Select, { type SelectChangeEvent } from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 import './SemanticSearchTab.scss';
 
 interface SemanticSearchTabProps {
@@ -152,8 +154,9 @@ export function SemanticSearchTab({
       let clientTranscript = null;
       if (activeVideo && activeVideo.youtubeId === selectedYoutubeId && !isIndexed) {
         try {
-          clientTranscript = await extractTranscriptFromTab(activeVideo.tabId);
-          console.log(`[TranscriptExtractor] Extracted ${clientTranscript?.length || 0} chunks from active tab`);
+          const prefLang = speechLang === 'hi-IN' ? 'hi' : 'en';
+          clientTranscript = await extractTranscriptFromTab(activeVideo.tabId, prefLang);
+          console.log(`[TranscriptExtractor] Extracted ${clientTranscript?.length || 0} chunks (${prefLang}) from active tab`);
         } catch {
           // If client extract fails or is unavailable, backend fallback will handle it
         }
@@ -459,49 +462,152 @@ export function SemanticSearchTab({
             )}
 
             {isSpeechSupported && (
-              <>
-                <button
-                  type="button"
-                  className={`lang-pill-btn ${speechLang === 'hi-IN' ? 'hindi' : 'english'}`}
-                  title={`Voice Language: ${speechLang === 'hi-IN' ? 'Hindi (हिंदी)' : 'English'}. Click to toggle.`}
-                  onClick={() => setSpeechLang((prev) => (prev === 'en-IN' ? 'hi-IN' : 'en-IN'))}
-                  disabled={isListening}
-                >
-                  {speechLang === 'hi-IN' ? 'HI' : 'EN'}
-                </button>
-
-                <button
-                  type="button"
-                  className={`mic-btn ${isListening ? 'listening' : ''}`}
-                  title={
-                    isListening
-                      ? 'Stop listening'
-                      : `Voice Search (${speechLang === 'hi-IN' ? 'Hindi' : 'English'})`
-                  }
-                  onClick={handleToggleVoice}
-                >
-                  {isListening ? (
-                    <span className="pulsing-mic-icon">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                        <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
-                        <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" />
-                        <line x1="12" y1="19" x2="12" y2="23" />
-                        <line x1="8" y1="23" x2="16" y2="23" />
-                      </svg>
-                    </span>
-                  ) : (
+              <button
+                type="button"
+                className={`mic-btn ${isListening ? 'listening' : ''}`}
+                title={
+                  isListening
+                    ? 'Stop listening'
+                    : `Voice Search (${speechLang === 'hi-IN' ? 'Hindi' : 'English'})`
+                }
+                onClick={handleToggleVoice}
+              >
+                {isListening ? (
+                  <span className="pulsing-mic-icon">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                      <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+                      <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" />
                       <line x1="12" y1="19" x2="12" y2="23" />
                       <line x1="8" y1="23" x2="16" y2="23" />
                     </svg>
-                  )}
-                </button>
-              </>
+                  </span>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                  </svg>
+                )}
+              </button>
             )}
           </div>
+        </div>
+
+        {/* Full-width Language Selection Bar directly below search input */}
+        <div className="search-lang-row">
+          <label className="lang-label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+            <span>Language Option</span>
+          </label>
+
+          <Select
+            fullWidth
+            value={speechLang}
+            onChange={(e: SelectChangeEvent) => setSpeechLang(e.target.value as 'en-IN' | 'hi-IN')}
+            disabled={isListening || loading}
+            size="small"
+            className="full-width-lang-select"
+            renderValue={(selected) => (
+              <div className="selected-lang-display">
+                <div className="lang-main">
+                  <span className="lang-flag">{selected === 'hi-IN' ? '🇮🇳' : '🇬🇧'}</span>
+                  <span className={`lang-text ${selected === 'hi-IN' ? 'hindi' : 'english'}`}>
+                    {selected === 'hi-IN' ? 'Hindi (हिंदी)' : 'English (EN)'}
+                  </span>
+                </div>
+                <span className="lang-meta">
+                  {selected === 'hi-IN' ? 'Captions & Voice: Hindi' : 'Captions & Voice: English'}
+                </span>
+              </div>
+            )}
+            MenuProps={{
+              slotProps: {
+                paper: {
+                  sx: {
+                    bgcolor: '#181924',
+                    color: '#f1f5f9',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.7)',
+                    borderRadius: '8px',
+                    mt: 0.5,
+                    '& .MuiMenuItem-root': {
+                      fontSize: '12px',
+                      py: '8px',
+                      px: '12px',
+                      '&:hover': {
+                        bgcolor: 'rgba(255, 255, 255, 0.06)',
+                      },
+                      '&.Mui-selected': {
+                        bgcolor: 'rgba(16, 185, 129, 0.18)',
+                        color: '#34d399',
+                        fontWeight: 600,
+                        '&:hover': {
+                          bgcolor: 'rgba(16, 185, 129, 0.25)',
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            }}
+            sx={{
+              width: '100%',
+              bgcolor: '#191a24',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '6px',
+              color: '#e2e8f0',
+              fontSize: '12px',
+              height: '34px',
+              transition: 'all 0.15s ease',
+              '&:hover': {
+                borderColor: 'rgba(255, 255, 255, 0.22)',
+                bgcolor: '#1d1e2a',
+              },
+              '&.Mui-focused': {
+                borderColor: '#10b981',
+                boxShadow: '0 0 0 2px rgba(16, 185, 129, 0.15)',
+              },
+              '& .MuiSelect-select': {
+                padding: '6px 12px !important',
+                display: 'flex',
+                alignItems: 'center',
+                width: '100%',
+              },
+              '& .MuiSelect-icon': {
+                color: '#94a3b8',
+                fontSize: '18px',
+                right: '8px',
+              },
+              '& .MuiOutlinedInput-notchedOutline': {
+                border: 'none',
+              },
+            }}
+          >
+            <MenuItem value="en-IN">
+              <div className="menu-option-item">
+                <div className="option-header">
+                  <span className="option-flag">🇬🇧</span>
+                  <span className="option-title">English</span>
+                </div>
+                <span className="option-desc">Search transcripts & voice in English (EN)</span>
+              </div>
+            </MenuItem>
+            <MenuItem value="hi-IN">
+              <div className="menu-option-item">
+                <div className="option-header">
+                  <span className="option-flag">🇮🇳</span>
+                  <span className="option-title">Hindi (हिंदी)</span>
+                </div>
+                <span className="option-desc">Search transcripts & voice in Hindi (HI)</span>
+              </div>
+            </MenuItem>
+          </Select>
         </div>
 
         <button

@@ -62,13 +62,19 @@ export async function checkTabCaptions(tabId: number): Promise<CaptionCheckResul
   }
 }
 
+export interface TrackItem {
+  baseUrl: string;
+  languageCode: string;
+  name?: string;
+}
+
 /**
  * 1. Grabs available caption track URLs directly from the active YouTube player state.
  * Runs inside world: 'MAIN' to read the page's player object and returns plain JSON.
  */
 export async function getTrackListFromTab(
   tabId: number
-): Promise<{ baseUrl: string; languageCode: string }[] | null> {
+): Promise<TrackItem[] | null> {
   try {
     const results = await chrome.scripting.executeScript({
       target: { tabId },
@@ -106,6 +112,7 @@ export async function getTrackListFromTab(
             .map((t: any) => ({
               baseUrl: t.baseUrl || '',
               languageCode: t.languageCode || 'en',
+              name: t.name?.simpleText || t.name?.runs?.[0]?.text || t.languageCode || 'Unknown',
             }))
             .filter((t: any) => Boolean(t.baseUrl));
         } catch {
@@ -158,7 +165,10 @@ function parseXmlTranscript(xmlContent: string): ExtractedChunk[] {
  * Runs in the extension context with host_permissions ("https://www.youtube.com/*") so it is never
  * blocked by page CSP, credentials, or cloud IP limits.
  */
-export async function extractTranscriptFromTab(tabId: number): Promise<ExtractedChunk[] | null> {
+export async function extractTranscriptFromTab(
+  tabId: number,
+  preferredLang = 'en'
+): Promise<ExtractedChunk[] | null> {
   try {
     const tracks = await getTrackListFromTab(tabId);
     if (!tracks || tracks.length === 0) {
@@ -166,8 +176,11 @@ export async function extractTranscriptFromTab(tabId: number): Promise<Extracted
       return null;
     }
 
-    // Prefer English if available, otherwise Hindi, otherwise first available track
+    const lang = preferredLang.toLowerCase();
+
+    // Prefer selected language (e.g., 'hi' or 'en'), then fallback to alternatives
     const selectedTrack =
+      tracks.find((t) => t.languageCode === lang || t.languageCode.startsWith(lang)) ||
       tracks.find((t) => t.languageCode === 'en' || t.languageCode.startsWith('en')) ||
       tracks.find((t) => t.languageCode === 'hi' || t.languageCode.startsWith('hi')) ||
       tracks[0];

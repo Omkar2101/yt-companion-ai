@@ -13,9 +13,23 @@ import {
   saveBookmark,
   getBookmarks,
   deleteTimestamp,
+  toggleAutoDeleteTimestamp,
   type BookmarkItem,
 } from '../services/api';
 import './BookmarkPage.scss';
+
+const formatTimeRemaining = (expiresAt?: string | null): string => {
+  if (!expiresAt) return '';
+  const diffMs = new Date(expiresAt).getTime() - Date.now();
+  if (diffMs <= 0) return 'Expiring';
+  const totalMins = Math.floor(diffMs / (1000 * 60));
+  const hours = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+  if (hours > 0) {
+    return `${hours}h ${mins}m`;
+  }
+  return `${mins}m`;
+};
 
 export function BookmarkPage() {
   const [email, setEmail] = useState(() => {
@@ -42,6 +56,17 @@ export function BookmarkPage() {
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [autoDeleteOnSave, setAutoDeleteOnSave] = useState(false);
+  const [togglingAutoDeleteId, setTogglingAutoDeleteId] = useState<string | null>(null);
+  const [, setTick] = useState(0);
+
+  // Periodically refresh the countdown timer every 60 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTick((t) => t + 1);
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Persist email changes
   const handleSaveEmail = (e: React.FormEvent) => {
@@ -134,13 +159,15 @@ export function BookmarkPage() {
         title: videoInfo.title,
         timeInSec,
         note: note.trim() || undefined,
+        autoDelete: autoDeleteOnSave,
       });
 
       setStatus({
         type: 'success',
-        text: `Saved timestamp at ${formatTime(timeInSec)}!`,
+        text: `Saved timestamp at ${formatTime(timeInSec)}${autoDeleteOnSave ? ' (expires in 24h)' : ''}!`,
       });
       setNote('');
+      setAutoDeleteOnSave(false);
       await loadBookmarks();
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -195,6 +222,49 @@ export function BookmarkPage() {
       });
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  // Toggle 24-hour auto-delete for a timestamp
+  const handleToggleAutoDelete = async (timestampId: string, currentExpiresAt?: string | null) => {
+    const willEnable = !currentExpiresAt;
+    setTogglingAutoDeleteId(timestampId);
+
+    // Optimistically update the UI so the user gets instant visual response
+    setBookmarks((prev) =>
+      prev.map((b) => ({
+        ...b,
+        timestamps: b.timestamps.map((t) =>
+          t.id === timestampId
+            ? {
+                ...t,
+                expiresAt: willEnable
+                  ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+                  : null,
+              }
+            : t
+        ),
+      }))
+    );
+
+    try {
+      await toggleAutoDeleteTimestamp(timestampId, willEnable);
+      setStatus({
+        type: 'info',
+        text: willEnable
+          ? 'Auto-delete enabled (will expire in 24 hours)'
+          : 'Auto-delete disabled (saved permanently)',
+      });
+      setTimeout(() => setStatus(null), 2500);
+    } catch (err: unknown) {
+      // Revert if API request fails
+      await loadBookmarks();
+      setStatus({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to update auto-delete status',
+      });
+    } finally {
+      setTogglingAutoDeleteId(null);
     }
   };
 
@@ -363,6 +433,34 @@ export function BookmarkPage() {
               onChange={(e) => setNote(e.target.value)}
               disabled={!videoInfo || loading}
             />
+
+            <div className="form-options">
+              <label
+                className={`auto-delete-form-label ${autoDeleteOnSave ? 'checked' : ''}`}
+                title="Automatically delete this timestamp 24 hours after creation"
+              >
+                <input
+                  type="checkbox"
+                  checked={autoDeleteOnSave}
+                  onChange={(e) => setAutoDeleteOnSave(e.target.checked)}
+                  disabled={!videoInfo || loading}
+                />
+                <span className="custom-check-icon">
+                  {autoDeleteOnSave ? (
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  ) : null}
+                </span>
+                <span className="form-check-text">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  Auto-delete after 24 hrs
+                </span>
+              </label>
+            </div>
           </div>
 
           <button className="submit-btn" type="submit" disabled={!videoInfo || loading}>
@@ -506,6 +604,42 @@ export function BookmarkPage() {
                       </button>
 
                       <div className="item-actions">
+                        <label
+                          className={`action-btn auto-delete-pill ${item.expiresAt ? 'active' : ''} ${
+                            togglingAutoDeleteId === item.id ? 'loading' : ''
+                          }`}
+                          title={
+                            item.expiresAt
+                              ? `Auto-deletes in ${formatTimeRemaining(item.expiresAt)} (Click to keep permanently)`
+                              : 'Auto-delete after 24 hrs (Click to enable)'
+                          }
+                        >
+                          <input
+                            type="checkbox"
+                            className="hidden-checkbox"
+                            checked={Boolean(item.expiresAt)}
+                            onChange={() => handleToggleAutoDelete(item.id, item.expiresAt)}
+                            disabled={togglingAutoDeleteId === item.id}
+                          />
+                          <span className="checkbox-indicator">
+                            {item.expiresAt ? (
+                              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            ) : null}
+                          </span>
+                          <span className="auto-delete-label">
+                            {item.expiresAt ? (
+                              <>
+                                <span className="timer-prefix">⏳</span>
+                                <span>{formatTimeRemaining(item.expiresAt)}</span>
+                              </>
+                            ) : (
+                              '24h'
+                            )}
+                          </span>
+                        </label>
+
                         <button
                           className={`action-btn ${copiedId === item.id ? 'copied' : ''}`}
                           onClick={() => handleCopyLink(item.youtubeId, item.timeInSec, item.id)}

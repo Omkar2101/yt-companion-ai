@@ -248,6 +248,67 @@
       }
     }
 
+    .form-options {
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+
+      .auto-delete-form-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: $text-muted;
+        cursor: pointer;
+        user-select: none;
+        transition: color 0.15s ease;
+
+        input {
+          position: absolute;
+          opacity: 0;
+          width: 0;
+          height: 0;
+          pointer-events: none;
+        }
+
+        .custom-check-icon {
+          width: 13px;
+          height: 13px;
+          border-radius: 3px;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          background-color: $bg-input;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.15s ease;
+        }
+
+        .form-check-text {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        &:hover {
+          color: $text-secondary;
+
+          .custom-check-icon {
+            border-color: rgba(255, 255, 255, 0.35);
+          }
+        }
+
+        &.checked {
+          color: #fbbf24;
+
+          .custom-check-icon {
+            background-color: #f59e0b;
+            border-color: #f59e0b;
+            color: #12131a;
+          }
+        }
+      }
+    }
+
     .submit-btn {
       display: flex;
       align-items: center;
@@ -501,6 +562,74 @@
               &.delete:hover {
                 color: $accent-red;
                 background-color: rgba(239, 68, 68, 0.12);
+              }
+            }
+
+            .auto-delete-pill {
+              cursor: pointer;
+              user-select: none;
+              border: 1px solid rgba(255, 255, 255, 0.08);
+              background-color: rgba(255, 255, 255, 0.02);
+              padding: 2px 6px;
+              border-radius: $radius-xs;
+              transition: all 0.15s ease;
+
+              .hidden-checkbox {
+                position: absolute;
+                opacity: 0;
+                width: 0;
+                height: 0;
+                pointer-events: none;
+              }
+
+              .checkbox-indicator {
+                width: 10px;
+                height: 10px;
+                border-radius: 2px;
+                border: 1px solid rgba(255, 255, 255, 0.22);
+                background-color: rgba(0, 0, 0, 0.25);
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.15s ease;
+              }
+
+              .auto-delete-label {
+                display: inline-flex;
+                align-items: center;
+                gap: 2px;
+                font-family: inherit;
+                font-size: 10px;
+
+                .timer-prefix {
+                  font-size: 9px;
+                }
+              }
+
+              &:hover {
+                border-color: rgba(255, 255, 255, 0.2);
+                color: $text-primary;
+
+                .checkbox-indicator {
+                  border-color: rgba(255, 255, 255, 0.4);
+                }
+              }
+
+              &.active {
+                background-color: rgba(245, 158, 11, 0.12);
+                border-color: rgba(245, 158, 11, 0.35);
+                color: #fbbf24;
+
+                .checkbox-indicator {
+                  background-color: #f59e0b;
+                  border-color: #f59e0b;
+                  color: #12131a;
+                }
+              }
+
+              &.loading {
+                opacity: 0.6;
+                cursor: wait;
               }
             }
           }

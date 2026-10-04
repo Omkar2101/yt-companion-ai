@@ -6,7 +6,7 @@ export const createBookmark = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { email, youtubeId, title, timeInSec, note } = req.body;
+    const { email, youtubeId, title, timeInSec, note, autoDelete } = req.body;
 
     // Validation: Ensure required fields are present
     if (!email || !youtubeId || !title || timeInSec === undefined) {
@@ -44,12 +44,18 @@ export const createBookmark = async (
       });
     }
 
-    // 3. Create the new timestamp under this bookmark
+    // 3. Compute 24-hr expiration if autoDelete is requested
+    const expiresAt = autoDelete
+      ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+      : null;
+
+    // 4. Create the new timestamp under this bookmark
     const newTimestamp = await prisma.timestamp.create({
       data: {
         bookmarkId: bookmark.id,
         timeInSec: parseFloat(timeInSec),
         note: note || null,
+        expiresAt,
       },
     });
 
@@ -83,7 +89,9 @@ export const getBookmarks = async (
       return;
     }
 
-    // 1. Find the user and include their bookmarks & timestamps
+    const now = new Date();
+
+    // 1. Find the user and include active bookmarks & non-expired timestamps
     const user = await prisma.user.findUnique({
       where: { email: String(email) },
       include: {
@@ -92,6 +100,12 @@ export const getBookmarks = async (
           where: youtubeId ? { youtubeId: String(youtubeId) } : undefined,
           include: {
             timestamps: {
+              where: {
+                OR: [
+                  { expiresAt: null },
+                  { expiresAt: { gt: now } },
+                ],
+              },
               orderBy: { timeInSec: "asc" }, // Sort timestamps from start to finish of the video
             },
           },
@@ -104,9 +118,14 @@ export const getBookmarks = async (
       return;
     }
 
+    // Filter out bookmarks that have 0 remaining valid timestamps
+    const activeBookmarks = user.bookmarks.filter(
+      (b) => b.timestamps.length > 0
+    );
+
     res.status(200).json({
       success: true,
-      bookmarks: user.bookmarks,
+      bookmarks: activeBookmarks,
     });
   } catch (error) {
     console.error("Error fetching bookmarks:", error);
@@ -143,6 +162,46 @@ export const deleteTimestamp = async (
     res
       .status(500)
       .json({ error: "Internal server error while deleting timestamp" });
+  }
+};
+
+export const toggleAutoDelete = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { autoDelete } = req.body;
+
+    if (!id) {
+      res.status(400).json({ error: "Missing timestamp ID" });
+      return;
+    }
+
+    const timestampId = Array.isArray(id) ? id[0] : id;
+
+    // Calculate 24-hr expiration from current time or disable it
+    const expiresAt = autoDelete
+      ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+      : null;
+
+    const updatedTimestamp = await prisma.timestamp.update({
+      where: { id: timestampId },
+      data: { expiresAt },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: autoDelete
+        ? "Auto-delete set for 24 hours"
+        : "Auto-delete disabled",
+      timestamp: updatedTimestamp,
+    });
+  } catch (error) {
+    console.error("Error toggling auto-delete:", error);
+    res
+      .status(500)
+      .json({ error: "Internal server error while toggling auto-delete" });
   }
 };
 

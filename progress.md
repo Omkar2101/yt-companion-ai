@@ -29,6 +29,14 @@ A centralized, day-wise progress log across all modules to monitor tasks, comple
   - Added video selection (active YouTube tab, saved videos dropdown, custom URL/ID input).
   - Implemented 1-click **Jump to Time** in player, **Copy Shareable Link**, and **Save to Bookmarks**.
   - Verified end-to-end vector generation and cosine similarity search.
+  - Implemented **24-hour Auto-Delete** toggle checkbox inside timestamp cards with live countdown badge (`⏳ 23h 59m`) and optimistic state updates.
+  - Added auto-delete checkbox option when creating new timestamp bookmarks.
+  - Added **Material UI (MUI) Dropdown** (`Select` & `MenuItem`) replacing static language toggle for Hindi / English, controlling both voice recognition and browser caption track extraction.
+- **`backend-express/`**
+  - Added indexed `expiresAt DateTime?` to `Timestamp` model in Prisma schema.
+  - Added query-time lazy filtering in `getBookmarks` for immediate consistency.
+  - Created [cleanup.service.ts](file:///c:/Users/omiit/Desktop/Projects/yt-companion-ai/backend-express/src/services/cleanup.service.ts) background scheduler for periodic hard-deletions and orphan bookmark pruning.
+  - Added `PATCH /api/bookmarks/timestamps/:id/auto-delete` endpoint.
 
 ### **Day 6 — 2026-09-30**
 - **`extension/`**
