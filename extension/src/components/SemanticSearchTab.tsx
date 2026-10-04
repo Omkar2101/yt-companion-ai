@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   searchSemantic,
   checkVideoStatus,
@@ -51,6 +51,27 @@ export function SemanticSearchTab({
   const [copiedTimeId, setCopiedTimeId] = useState<string | null>(null);
   const [savingBookmarkId, setSavingBookmarkId] = useState<string | null>(null);
   const [savedBookmarkSuccess, setSavedBookmarkSuccess] = useState<string | null>(null);
+
+  // Voice Search (Speech-to-Text) states
+  const [isListening, setIsListening] = useState(false);
+  const [speechLang, setSpeechLang] = useState<'en-IN' | 'hi-IN'>('en-IN');
+  const recognitionRef = useRef<any>(null);
+  const isSpeechSupported =
+    typeof window !== 'undefined' &&
+    ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
+
+  // Clean up speech recognition on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, []);
 
   // Sync with active video when it changes, if not in custom mode
   useEffect(() => {
@@ -146,6 +167,88 @@ export function SemanticSearchTab({
       setError(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Voice Search (Speech-to-Text) Toggle
+  const handleToggleVoice = async () => {
+    if (!isSpeechSupported) {
+      setError('Voice recognition is not supported in this browser.');
+      return;
+    }
+
+    if (isListening) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // ignore
+        }
+      }
+      setIsListening(false);
+      return;
+    }
+
+    // Try requesting mic permission
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    } catch {
+      setError('Microphone access was denied. Please allow microphone permission in Chrome.');
+      return;
+    }
+
+    try {
+      const SpeechRecognition =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = speechLang;
+      recognition.continuous = false;
+      recognition.interimResults = true;
+
+      let lastRecognized = '';
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setError(null);
+      };
+
+      recognition.onresult = (event: any) => {
+        let interimText = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          interimText += event.results[i][0].transcript;
+        }
+        if (interimText.trim()) {
+          lastRecognized = interimText.trim();
+          setQuery(interimText.trim());
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn('[Voice Search] Error:', event.error);
+        setIsListening(false);
+        if (event.error === 'not-allowed') {
+          setError('Microphone permission blocked. Please allow mic in Chrome Settings.');
+        } else if (event.error !== 'no-speech') {
+          setError(`Voice search error: ${event.error}`);
+        }
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        if (lastRecognized && selectedYoutubeId) {
+          handleSearch(undefined, lastRecognized);
+        }
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error('[Voice Search] Failed to start:', err);
+      setIsListening(false);
+      setError('Failed to start voice recognition.');
     }
   };
 
@@ -331,23 +434,74 @@ export function SemanticSearchTab({
           <input
             className="semantic-input"
             type="text"
-            placeholder="Search spoken content (e.g. formula, bug fix, conclusion)..."
+            placeholder={
+              isListening
+                ? `Listening (${speechLang === 'hi-IN' ? 'Hindi' : 'English'})... speak now`
+                : "Search spoken content (e.g. quantity, formula)..."
+            }
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             disabled={loading}
           />
-          {query && (
-            <button
-              className="clear-btn"
-              type="button"
-              onClick={() => {
-                setQuery('');
-                setSearchResult(null);
-              }}
-            >
-              ✕
-            </button>
-          )}
+          <div className="input-actions">
+            {query && !loading && (
+              <button
+                className="clear-btn"
+                type="button"
+                title="Clear query"
+                onClick={() => {
+                  setQuery('');
+                  setSearchResult(null);
+                }}
+              >
+                ✕
+              </button>
+            )}
+
+            {isSpeechSupported && (
+              <>
+                <button
+                  type="button"
+                  className={`lang-pill-btn ${speechLang === 'hi-IN' ? 'hindi' : 'english'}`}
+                  title={`Voice Language: ${speechLang === 'hi-IN' ? 'Hindi (हिंदी)' : 'English'}. Click to toggle.`}
+                  onClick={() => setSpeechLang((prev) => (prev === 'en-IN' ? 'hi-IN' : 'en-IN'))}
+                  disabled={isListening}
+                >
+                  {speechLang === 'hi-IN' ? 'HI' : 'EN'}
+                </button>
+
+                <button
+                  type="button"
+                  className={`mic-btn ${isListening ? 'listening' : ''}`}
+                  title={
+                    isListening
+                      ? 'Stop listening'
+                      : `Voice Search (${speechLang === 'hi-IN' ? 'Hindi' : 'English'})`
+                  }
+                  onClick={handleToggleVoice}
+                >
+                  {isListening ? (
+                    <span className="pulsing-mic-icon">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                        <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+                        <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" />
+                        <line x1="12" y1="19" x2="12" y2="23" />
+                        <line x1="8" y1="23" x2="16" y2="23" />
+                      </svg>
+                    </span>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="23" />
+                      <line x1="8" y1="23" x2="16" y2="23" />
+                    </svg>
+                  )}
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         <button

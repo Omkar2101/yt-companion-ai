@@ -2,8 +2,8 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from sentence_transformers import SentenceTransformer
 from app.transcript import get_video_transcript
 
-# Load our local model once into memory
-model = SentenceTransformer("all-MiniLM-L6-v2")
+# Load multilingual model once into memory (supports English, Hindi, and 50+ languages)
+model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 
 def process_youtube_transcript(youtube_id: str, client_transcript: list = None):
     try:
